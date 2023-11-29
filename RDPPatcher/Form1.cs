@@ -8,6 +8,8 @@ using System.Text;
 using System.Windows.Forms;
 using System.ServiceProcess;
 using System.Drawing.Text;
+using System.IO;
+using System.Security.Principal;
 
 namespace RDPPatcher
 {
@@ -35,8 +37,41 @@ namespace RDPPatcher
             return serviceName + " is " + st + "\r\n";
         }
 
-        private static void takeOwnership()
+        private static void StopWindowsService(string serviceName)
         {
+            ServiceController sc = new ServiceController(serviceName);
+            sc.Stop();
+            sc.WaitForStatus(ServiceControllerStatus.Stopped);
+
+        }
+
+        private static void takeOwnership(TextBox tb)
+        {
+            //string termsrvPath = Environment.GetEnvironmentVariable("windir").ToString() + @"\system32\termsrv.dll";
+            string termsrvPath = @"D:\IPA\uYouPlus_18.14.1_3.0.ipa";
+            tb.AppendText("Checking termsrv path...\r\n");
+            tb.AppendText(termsrvPath + "\r\n");
+            var fs = File.GetAccessControl(termsrvPath);
+            var sid = fs.GetOwner(typeof(SecurityIdentifier));
+            var NTAccount = sid.Translate(typeof(NTAccount));
+            tb.AppendText("Current file owner is " + NTAccount.ToString() + "\r\n");
+            var adminGroup = new NTAccount(".", "Administrators");
+            var adminSID = adminGroup.Translate(typeof(SecurityIdentifier));
+            while (sid != adminSID)
+            {
+                tb.AppendText("Taking ownership...\r\n");
+                try
+                {
+                    fs.SetOwner(adminGroup);
+                    File.SetAccessControl(termsrvPath, fs);
+                    sid = fs.GetOwner(typeof(SecurityIdentifier));
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
+            tb.AppendText("File owned!!!");
 
         }
 
@@ -56,6 +91,7 @@ namespace RDPPatcher
         private void simpleButton2_Click(object sender, EventArgs e)
         {
             simpleButton2.Enabled = false;
+            textBox1.Clear();
             textBox1.Text = "Checking servies status...\r\n";
             termsrvStatus = GetWindowsServiceStatus("TermService");
             sessionenvStatus = GetWindowsServiceStatus("SessionEnv");
@@ -63,13 +99,7 @@ namespace RDPPatcher
             textBox1.AppendText(termsrvStatus);
             textBox1.AppendText(sessionenvStatus);
             textBox1.AppendText(umrdpsrvStatus);
-            string termsrvPath = Environment.GetEnvironmentVariable("windir") + @"\system32\termsrv.dll";
-            textBox1.AppendText("Checking termsrv.dll path...\r\n");
-            textBox1.AppendText(termsrvPath + "\r\n");
-
-
-
-
+            takeOwnership(textBox1);
             simpleButton2.Enabled = true;
         }
 

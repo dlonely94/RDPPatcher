@@ -77,6 +77,7 @@
             // 
             // textBox1
             // 
+            this.textBox1.Cursor = System.Windows.Forms.Cursors.IBeam;
             this.textBox1.Location = new System.Drawing.Point(12, 29);
             this.textBox1.Multiline = true;
             this.textBox1.Name = "textBox1";
